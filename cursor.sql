@@ -116,3 +116,70 @@ begin
   end loop;
 end;
 /
+-- bulk ... collect into
+DECLARE
+  cursor my_cursor is select ename from emp where deptno = 10;
+  type ename_table_type is table of varchar2(10);
+  ename_table ename_table_type;
+BEGIN
+  open my_cursor;
+  fetch my_cursor bulk collect into ename_table;
+  for i in 1..ename_table.count loop
+    dbms_output.put_line(ename_table(i));
+  end loop;
+  close my_cursor;
+END;
+/
+-- 显式游标题
+/*
+给student添加一列prov varchar2类型, 再从address中, 将prov字段的数值取出来, 对应的插入到student新增的prov列中
+*/
+create table address (sno number, prov varchar2(10));
+insert into address values(2, 'shanghai');
+insert into address values(1, 'canberra');
+insert into address values(3, 'dalian');
+insert into address values(4, 'qingdao');
+commit;
+
+alter table student add prov varchar2(10);
+DECLARE
+  s_add address%rowtype;
+  cursor s_cur is select * from address;
+BEGIN
+  for s_cur2 in s_cur loop
+    update student s set s.prov = s_cur2.prov where s.sno = s_cur2.sno;
+  end loop;
+END;
+/
+select * from student;
+
+-- ref游标
+/*
+* ref游标和游标变量用于处理运行时动态执行的sql查询
+* 创建游标变量需要两个步骤
+  - 声明ref游标类型
+  - 声明ref游标类型的变量
+*/
+declare
+  type refcur is ref cursor;
+  cursor2 refcur;
+  tab varchar2(50);
+  tb_name varchar2(50);
+  no2 student.sno%type;
+  name2 student.sname%type;
+begin
+  tb_name := '&tab';
+  if tb_name = 'student' then
+    open cursor2 for select sno, sname from student;
+    fetch cursor2 into no2, name2;
+      while cursor2%found
+        loop
+          dbms_output.put_line(cursor2%rowcount || '. sno is: ' || no2 || ', name is: ' || name2);
+          fetch cursor2 into no2, name2;
+        end loop;
+      close cursor2;
+    else
+      dbms_output.put_line('not a right table name');
+  end if;
+end;
+/
